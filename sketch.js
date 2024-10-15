@@ -142,6 +142,7 @@ class DraggableShape {
     this.angle = angle;
     this.snapped = false;
     this.incorrectlyNear = false;
+    this.correctlyNear = false; // Nuevo estado
   }
 
   update() {
@@ -150,11 +151,13 @@ class DraggableShape {
     rotate(radians(this.angle));
 
     if (this.snapped) {
-      fill(0, 255, 0);
+      fill(0, 255, 0); // Verde cuando está encastrada
+    } else if (this.correctlyNear) {
+      fill('#9ACD32'); // Amarillo verdoso cuando está cerca de encastrar
     } else if (this.incorrectlyNear) {
-      fill(255, 255, 0);
+      fill(255, 255, 0); // Amarillo cuando está cerca pero mal
     } else {
-      fill(255, 0, 0);
+      fill(255, 0, 0); // Rojo por defecto
     }
     stroke(0);
     strokeWeight(2);
@@ -175,29 +178,39 @@ class DraggableShape {
     pop();
   }
 
-  isMouseOver() {
-    let d = dist(mouseX / zoomFactor, mouseY / zoomFactor, this.x, this.y);
-    return d < this.size / 2;
-  }
-
   checkIfSnappedOrNear(fixedShapes) {
     let nearAnyShape = false;
+    this.correctlyNear = false; // Reiniciar estado
+
     for (let fixed of fixedShapes) {
       if (this.type === fixed.type) {
-        if (this.x === fixed.x && this.y === fixed.y && abs(this.angle % 360) === 0) {
-          this.snapped = true;
-          this.incorrectlyNear = false;
+        let d = dist(this.x, this.y, fixed.x, fixed.y);
+        if (d < 50) {
+          if (this.angle % 360 === 0 && this.x === fixed.x && this.y === fixed.y) {
+            this.snapped = true; // Encajó completamente
+            this.incorrectlyNear = false;
+            this.correctlyNear = false;
+          } else {
+            this.correctlyNear = true; // Está sobre la posición correcta pero con rotación incorrecta
+            this.snapped = false;
+          }
         } else {
           this.snapped = false;
         }
       } else {
         let d = dist(this.x, this.y, fixed.x, fixed.y);
         if (d < 50) {
-          nearAnyShape = true;
+          nearAnyShape = true; // Está cerca pero de la forma incorrecta
         }
       }
     }
 
-    this.incorrectlyNear = nearAnyShape && !this.snapped;
+    this.incorrectlyNear = nearAnyShape && !this.snapped && !this.correctlyNear;
+  }
+
+  isMouseOver() {
+    let d = dist(mouseX / zoomFactor, mouseY / zoomFactor, this.x, this.y);
+    return d < this.size / 2;
   }
 }
+
